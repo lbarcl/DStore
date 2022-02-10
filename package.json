@@ -1,0 +1,26 @@
+{
+  "name": "d-menager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src",
+    "dev": "set NODE_ENV=development&&nodemon src"
+  },
+  "author": "lbarcl",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "chalk": "^5.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.2",
+    "express-fileupload": "^1.2.1",
+    "form-data": "^4.0.0",
+    "mongoose": "^6.1.5",
+    "morgan": "^1.10.0",
+    "node-fetch": "^2.6.6"
+  },
+  "devDependencies": {
+    "dotenv": "^12.0.3"
+  }
+}
