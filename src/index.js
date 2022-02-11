@@ -6,7 +6,7 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-if (process.env.NODE_ENV ) {
+if (process.env.NODE_ENV == "development") {
     require('dotenv').config()
     console.log('Started on development envirionmet')
 }
