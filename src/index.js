@@ -9,12 +9,12 @@ const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV == "development") {
     require('dotenv').config()
     console.log('Started on development envirionmet')
+    app.use(require('morgan')('dev'));
 }
 
 app.use(require('cors')());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(require('morgan')('dev'));
 
 app.get('/', (req, res) => {
     res.sendStatus(200)
