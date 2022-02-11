@@ -16,6 +16,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(require('morgan')('dev'));
 
+app.get('/', (req, res) => {
+    res.sendStatus(200)
+})
 app.use('/buckets', require('./routes/bucket'))
 app.use('/users', require('./routes/user'))
 
