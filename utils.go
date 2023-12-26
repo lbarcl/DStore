@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"os"
 	"os/exec"
 	"runtime"
@@ -29,4 +31,10 @@ func CallClear() {
 	} else { //unsupported platform
 		panic("Your platform is unsupported! I can't clear terminal screen :(")
 	}
+}
+
+func Hash(buffer []byte) string {
+	h := sha1.New()
+	h.Write(buffer)
+	return hex.EncodeToString(h.Sum(nil))
 }

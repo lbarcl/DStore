@@ -12,9 +12,9 @@ import (
 
 const channelID = "1037079784229978123"
 const baseURL = "https://discord.com/api/v10"
-const botToken = "Nzg4NDUyMDg4MTM2MjA0MzYx.GS0Rfj.rh5Ii_eY02Hbe5cR6OT0OMXpaue53mRFgl7iRs"
+const botToken = "Nzg4NDUyMDg4MTM2MjA0MzYx.GArHov.y0hV_prE0jSZeqzLDczf1Pbgd24c7CvAKoNKrs"
 
-func SendMultipart(buffer []byte) (map[string]Message, error) {
+func SendMultipart(buffer []byte) (*Message, error) {
 	var body bytes.Buffer
 
 	writer := multipart.NewWriter(&body)
@@ -29,7 +29,6 @@ func SendMultipart(buffer []byte) (map[string]Message, error) {
 	}
 
 	payload := map[string]interface{}{
-		"content": "hello world!",
 		"attachments": []interface{}{map[string]interface{}{
 			"id":          0,
 			"description": "Part of a file",
@@ -75,13 +74,13 @@ func SendMultipart(buffer []byte) (map[string]Message, error) {
 
 	if response.StatusCode == http.StatusOK {
 		//fmt.Println("Status OK")
-		var result map[string]Message
+		var result Message
 		err := json.NewDecoder(response.Body).Decode(&result)
 		if err != nil {
 			return nil, err
 		}
 
-		return result, nil
+		return &result, nil
 	} else {
 		body, _ := io.ReadAll(response.Body)
 		return nil, fmt.Errorf("error uploading file. status: %s\nresponse Body: %s", response.Status, body)

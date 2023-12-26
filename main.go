@@ -32,15 +32,12 @@ l:
 				if !pattern.MatchString(input) {
 					fmt.Println("The file path you entered is not valid!")
 					continue
-				}
+				} */
 
-			*/
-
-			err := Upload(input, callBack)
+			err := Upload(input)
 			if err != nil {
 				log.Fatalf("There was an error uploading the file: %v", err)
 			}
-
 		case "exit":
 			// Breaks the loop
 			break l
