@@ -1,4 +1,4 @@
-module lbarcl/DClient
+module lbarcl/DStore
 
 go 1.21.5
 

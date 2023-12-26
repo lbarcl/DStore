@@ -6,16 +6,21 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/google/uuid"
 )
 
-func NewFile(name string, size int64) (*file, error) {
+func NewFile(name string, size int64, path string, totalPart int) (*File, error) {
 	id := uuid.New()
-	f := file{
-		ID:   id.String(),
-		Name: name,
-		Size: size,
+	f := File{
+		ID:            id.String(),
+		Name:          name,
+		Size:          size,
+		Paused:        false,
+		LocalPath:     path,
+		TotalParts:    totalPart,
+		RecordedParts: 0,
 	}
 	err := saveToFile(filepath.Join("files", f.ID, "file.json"), f)
 	if err != nil {
@@ -51,12 +56,12 @@ func saveToFile(filePath string, data interface{}) error {
 	return nil
 }
 
-func (f *file) Destroy() error {
+func (f *File) Destroy() error {
 	filePath := filepath.Join("files", f.ID)
 	return os.Remove(filePath)
 }
 
-func (f *file) AddPart(id string, messageID string, sequence int, hash string, size int64) error {
+func (f *File) AddPart(id string, messageID string, sequence int, hash string, size int64) error {
 	newPart := part{
 		ID:        id,
 		MessageID: messageID,
@@ -64,11 +69,12 @@ func (f *file) AddPart(id string, messageID string, sequence int, hash string, s
 		Hash:      hash,
 		Size:      size,
 	}
-
+	f.RecordedParts += 1
+	saveToFile(filepath.Join("files", f.ID, "file.json"), f)
 	return saveToFile(filepath.Join("files", f.ID, "parts", newPart.ID+".json"), newPart)
 }
 
-func (f *file) GetParts() ([]part, error) {
+func (f *File) GetParts() ([]part, error) {
 	partsDir := filepath.Join("files", f.ID, "parts")
 	dirEntry, err := os.ReadDir(partsDir)
 	if err != nil {
@@ -96,43 +102,75 @@ func (f *file) GetParts() ([]part, error) {
 		parts = append(parts, part)
 	}
 
+	sort.Slice(parts, func(i, j int) bool {
+		return parts[i].Sequence < parts[j].Sequence
+	})
+
 	return parts, nil
 }
 
-func GetAllFiles() ([]file, error) {
+func (f *File) Pause() {
+	f.Paused = true
+	saveToFile(filepath.Join("files", f.ID), f)
+}
+
+func (f *File) Unpause() {
+	f.Paused = true
+	saveToFile(filepath.Join("files", f.ID), f)
+}
+
+func GetAllFiles() ([]File, error) {
 	filesDir := "files"
 	dirEntry, err := os.ReadDir(filesDir)
 	if err != nil {
 		return nil, err
 	}
 
-	var files []file
+	var files []File
 	for _, de := range dirEntry {
 		if de.IsDir() {
-			continue // Skip directories
+			fileFilePath := filepath.Join(filesDir, de.Name(), "file.json")
+			fileData, err := ioutil.ReadFile(fileFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read file %s: %v", de.Name(), err)
+			}
+
+			var f File
+			if err := json.Unmarshal(fileData, &f); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal file JSON: %v", err)
+			}
+
+			files = append(files, f)
 		}
 
-		fileFilePath := filepath.Join(filesDir, de.Name())
-		fileData, err := ioutil.ReadFile(fileFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file %s: %v", de.Name(), err)
-		}
-
-		var f file
-		if err := json.Unmarshal(fileData, &f); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal file JSON: %v", err)
-		}
-
-		files = append(files, f)
 	}
 
 	return files, nil
 }
 
-type file struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Size int64  `json:"size"`
+func GetFile(id string) (*File, error) {
+	files, err := GetAllFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range files {
+		if f.ID == id {
+			return &f, nil
+		}
+	}
+
+	return nil, fmt.Errorf("we cannot find file with %s", id)
+}
+
+type File struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Size          int64  `json:"size"`
+	Paused        bool   `json:"paused"`
+	LocalPath     string `json:"localPath"`
+	TotalParts    int    `json:"totalParts"`
+	RecordedParts int    `json:"recordedParts"`
 }
 
 type part struct {

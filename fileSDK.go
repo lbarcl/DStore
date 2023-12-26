@@ -2,16 +2,14 @@ package main
 
 import (
 	"io"
-	"lbarcl/DClient/Discord"
-	"lbarcl/DClient/Records"
+	"lbarcl/DStore/Discord"
+	"lbarcl/DStore/Records"
 	"os"
 
 	"github.com/schollz/progressbar/v3"
 )
 
 const maxAttachmentSize = 10_000_000
-
-type Callback func(map[string]Discord.Message, string, bool)
 
 func Upload(filePath string) error {
 	fileInfo, err := os.Lstat(filePath)
@@ -47,14 +45,14 @@ func Upload(filePath string) error {
 
 	defer file.Close()
 
-	fileRecord, err := Records.NewFile(file.Name(), fileInfo.Size())
+	fileRecord, err := Records.NewFile(fileInfo.Name(), fileInfo.Size(), filePath, parts)
 	bar := progressbar.DefaultBytes(fileRecord.Size, "Uploading "+fileRecord.Name)
 
 	if err != nil {
 		return err
 	}
-
-	for i := 0; i < parts; i++ {
+	i := 0
+	for i < parts {
 		var buffer []byte
 		if parts == 1 {
 			buffer = make([]byte, fileInfo.Size())
@@ -70,6 +68,7 @@ func Upload(filePath string) error {
 			if err == io.EOF {
 				msg, err := Discord.SendMultipart(buffer)
 				if err != nil {
+					fileRecord.Pause()
 					return err
 				}
 				fileRecord.AddPart(msg.Attachments[0].ID, msg.ID, i, Hash(buffer), int64(msg.Attachments[0].Size))
@@ -81,11 +80,69 @@ func Upload(filePath string) error {
 
 		msg, err := Discord.SendMultipart(buffer)
 		if err != nil {
+			fileRecord.Pause()
 			return err
 		}
 		fileRecord.AddPart(msg.Attachments[0].ID, msg.ID, i, Hash(buffer), int64(msg.Attachments[0].Size))
 		bar.Add(len(buffer))
+		i++
+	}
+	bar.Finish()
+	return nil
+}
 
+func Resume(f *Records.File) error {
+	file, err := os.Open(f.LocalPath)
+
+	//fmt.Println("File opend!")
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	bar := progressbar.DefaultBytes(f.Size, "Uploading "+f.Name)
+	bar.Add(f.RecordedParts * maxAttachmentSize)
+
+	if err != nil {
+		return err
+	}
+	i := f.RecordedParts - 1
+	for i < f.TotalParts {
+		var buffer []byte
+		if f.TotalParts == 1 {
+			buffer = make([]byte, f.Size)
+		} else if i == f.TotalParts-1 {
+			buffer = make([]byte, f.Size-int64(maxAttachmentSize*i))
+		} else {
+			buffer = make([]byte, maxAttachmentSize)
+		}
+
+		_, err := file.ReadAt(buffer, int64(i*maxAttachmentSize))
+
+		if err != nil {
+			if err == io.EOF {
+				msg, err := Discord.SendMultipart(buffer)
+				if err != nil {
+					f.Pause()
+					return err
+				}
+				f.AddPart(msg.Attachments[0].ID, msg.ID, i, Hash(buffer), int64(msg.Attachments[0].Size))
+				bar.Add(len(buffer))
+				break
+			}
+			return err
+		}
+
+		msg, err := Discord.SendMultipart(buffer)
+		if err != nil {
+			f.Pause()
+			return err
+		}
+		f.AddPart(msg.Attachments[0].ID, msg.ID, i, Hash(buffer), int64(msg.Attachments[0].Size))
+		bar.Add(len(buffer))
+		i++
 	}
 	bar.Finish()
 	return nil

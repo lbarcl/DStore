@@ -10,9 +10,9 @@ import (
 	"net/textproto"
 )
 
-const channelID = "1037079784229978123"
+const channelID = "<YOUR_CHANNEL_ID>"
 const baseURL = "https://discord.com/api/v10"
-const botToken = "Nzg4NDUyMDg4MTM2MjA0MzYx.GArHov.y0hV_prE0jSZeqzLDczf1Pbgd24c7CvAKoNKrs"
+const botToken = "<YOUR_BOT_TOKEN>"
 
 func SendMultipart(buffer []byte) (*Message, error) {
 	var body bytes.Buffer
